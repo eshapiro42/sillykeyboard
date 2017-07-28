@@ -36,7 +36,7 @@ class App:
         outport = mido.open_output(output_spinbox.get())
         inport = mido.open_input(input_spinbox.get())
         delay = float(self.delay_entry.get())
-        interval = 4
+        interval = int(self.interval_entry.get())
         buffer = []
         def callback():
             while not self.stop_threads.is_set():
@@ -81,4 +81,3 @@ output_spinbox.pack(padx=5, pady=5, side=LEFT)
 
 app = App(root)
 root.mainloop()
-
