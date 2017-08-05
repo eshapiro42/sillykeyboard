@@ -3,6 +3,7 @@ import mido
 import time
 import threading
 import gui
+import mido.backends.rtmidi
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Window(gui.Ui_MainWindow):
