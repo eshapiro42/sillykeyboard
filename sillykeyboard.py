@@ -2,119 +2,110 @@ import sys
 import mido
 import time
 import threading
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QComboBox, QPushButton, QSlider, QHBoxLayout, QVBoxLayout
+import gui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
-class MainWindow(QWidget):
-
+class Window(gui.Ui_MainWindow):
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super(Window, self).setupUi(MainWindow)
+        self.setup()
+        self.actions()
+        # self.loops()
 
-        self.initUI()
+    def setup(self):
+        self.stopThreads = threading.Event()
+        self.inputComboBox.addItems(mido.get_input_names())
+        self.outputComboBox.addItems(mido.get_output_names())
+        self.axisComboBox.addItems(self.notesList())
+        self.axisComboBox.setCurrentIndex(self.notesList().index('C4'))
+        self.positionComboBox.addItems(['Above', 'On', 'Below'])
+        self.positionComboBox.setCurrentIndex(1)
 
-    def initUI(self):
+    def actions(self):
+        self.startButton.clicked.connect(self.start)
+        self.stopButton.clicked.connect(self.stop)
 
-        self.stop_threads = threading.Event()
-
-        self.input_combobox = QComboBox(self)
-        self.input_combobox.addItems(mido.get_input_names())
-
-        self.output_combobox = QComboBox(self)
-        self.output_combobox.addItems(mido.get_output_names())
-
-        self.start_button = QPushButton("Start")
-        self.start_button.clicked.connect(self.start)
-
-        self.stop_button = QPushButton("Stop")
-        self.stop_button.clicked.connect(self.stop)
-
-        self.delay_slider = QSlider(Qt.Horizontal)
-        self.delay_slider.setMinimum(0)
-        self.delay_slider.setMaximum(10000)
-        self.delay_slider.setValue(0)
-        self.delay_slider.valueChanged.connect(self.delayChange)
-
-        self.delay_label = QLabel(self)
-        self.delay_label.setText("0 ms")
-
-        self.interval_slider = QSlider(Qt.Horizontal)
-        self.interval_slider.setMinimum(-12)
-        self.interval_slider.setMaximum(12)
-        self.interval_slider.setValue(0)
-        self.interval_slider.valueChanged.connect(self.intervalChange)
-
-        self.interval_label = QLabel(self)
-        self.interval_label.setText("0 half steps")
-
-        self.devices_hbox = QHBoxLayout()
-        self.devices_hbox.addWidget(self.input_combobox)
-        self.devices_hbox.addWidget(self.output_combobox)
-        self.devices_hbox.addStretch(1)
-
-        self.controls_hbox = QHBoxLayout()
-        self.controls_hbox.addStretch(1)
-        self.controls_hbox.addWidget(self.delay_label)
-        self.controls_hbox.addStretch(1)
-        self.controls_hbox.addWidget(self.delay_slider)
-        self.controls_hbox.addWidget(self.interval_label)
-        self.controls_hbox.addStretch(1)
-        self.controls_hbox.addWidget(self.interval_slider)
-        self.controls_hbox.addWidget(self.start_button)
-        self.controls_hbox.addWidget(self.stop_button)
-
-        self.vbox = QVBoxLayout()
-        self.vbox.addLayout(self.devices_hbox)
-        self.vbox.addStretch(1)
-        self.vbox.addLayout(self.controls_hbox)
-
-        self.setLayout(self.vbox)
-
-        self.setGeometry(300, 300, 300, 150)
-        self.setWindowTitle('Buttons')
-        self.show()
-
-    def delayChange(self):
-        self.delay_label.setText(str(self.delay_slider.value()) + " ms")
-
-    def intervalChange(self):
-        self.interval_label.setText(str(self.interval_slider.value()) + " half steps")
+    # def loops(self):
+    #     def refreshDevices():
+    #         self.inputComboBox.clear()
+    #         self.inputComboBox.addItems(mido.get_input_names())
+    #         self.outputComboBox.clear()
+    #         self.outputComboBox.addItems(mido.get_output_names())
+    #
+    #     self.timer = QtCore.QTimer()
+    #     self.timer.timeout.connect(refreshDevices)
+    #     self.timer.start(2000)
 
     def start(self):
-        self.stop_threads.set()
-        time.sleep(.1)
-        self.stop_threads.clear()
-        outport = mido.open_output(self.input_combobox.currentText())
-        inport = mido.open_input(self.output_combobox.currentText())
-        delay = float(self.delay_slider.value())
-        interval = int(self.interval_slider.value())
+        self.stopThreads.set()
+        time.sleep(.05)
+        self.stopThreads.clear()
+        outport = mido.open_output(self.inputComboBox.currentText())
+        inport = mido.open_input(self.outputComboBox.currentText())
+        delay = float(self.delaySpinBox.value())
+        volume = float(self.volumeSpinBox.value())
         buffer = []
-        def callback():
-            while not self.stop_threads.is_set():
+
+        def transpose():
+            interval = int(self.intervalSpinBox.value())
+            while not self.stopThreads.is_set():
                 # Look for ripe MIDI messages
-                for msg, added_time in buffer:
-                    if added_time + (delay / float(1000)) < time.time():
+                for msg, addedTime in buffer:
+                    if addedTime + (delay / float(1000)) < time.time():
                         if msg.type in ["note_on", "note_off"]:
                             msg.note += interval
+                            msg.velocity = min(int(msg.velocity * volume / 100), 126)
                         outport.send(msg)
-                        buffer.remove((msg, added_time))
+                        buffer.remove((msg, addedTime))
                 # Look for new MIDI messages
                 for msg in inport.iter_pending():
                     buffer.append((msg, time.time()))
+
+        def mirror():
+            position = self.positionComboBox.currentText()
+            # All note indices are shifted down by 21 from their MIDI value
+            axis = self.notesList().index(self.axisComboBox.currentText()) + 21
+            while not self.stopThreads.is_set():
+                # Look for ripe MIDI messages
+                for msg, addedTime in buffer:
+                    if addedTime + (delay / float(1000)) < time.time():
+                        if msg.type in ["note_on", "note_off"]:
+                            msg.note -= 2 * (msg.note - axis)
+                            msg.velocity = min(int(msg.velocity * volume / 100), 126)
+                        outport.send(msg)
+                        buffer.remove((msg, addedTime))
+                # Look for new MIDI messages
+                for msg in inport.iter_pending():
+                    buffer.append((msg, time.time()))
+
+
+        if self.tabWidget.currentIndex() is 0:
+            callback = transpose
+        if self.tabWidget.currentIndex() is 1:
+            callback = mirror
         t = threading.Thread(target=callback)
         t.start()
 
+    def notesList(self):
+        keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+        notes = ['A0', 'A#0', 'B0']
+        for octave in range(1, 8):
+            for key in keys:
+                notes.append(key + str(octave))
+        notes.append('C8')
+        return notes
+
     def stop(self):
-        self.stop_threads.set()
+        self.stopThreads.set()
 
-    def closeEvent(self, event):
-        self.stop_threads.set()
-        event.accept()
+    def close(self):
+        self.stopThreads.set()
 
-def main():
-
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    sys.exit(app.exec_())
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    ui = Window()
+    MainWindow.show()
+    ret = app.exec_()
+    ui.close()
+    sys.exit(ret)
