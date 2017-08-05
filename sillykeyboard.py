@@ -27,10 +27,14 @@ class Window(gui.Ui_MainWindow):
 
     # def loops(self):
     #     def refreshDevices():
+    #         originalInput = self.inputComboBox.currentText()
     #         self.inputComboBox.clear()
     #         self.inputComboBox.addItems(mido.get_input_names())
+    #         self.inputComboBox.setCurrentIndex(mido.get_input_names().index(originalInput))
+    #         originalOutput = self.outputComboBox.currentText()
     #         self.outputComboBox.clear()
     #         self.outputComboBox.addItems(mido.get_output_names())
+    #         self.outputComboBox.setCurrentIndex(mido.get_output_names().index(originalOutput))
     #
     #     self.timer = QtCore.QTimer()
     #     self.timer.timeout.connect(refreshDevices)
@@ -45,45 +49,43 @@ class Window(gui.Ui_MainWindow):
         delay = float(self.delaySpinBox.value())
         volume = float(self.volumeSpinBox.value())
         buffer = []
-
-        def transpose():
-            interval = int(self.intervalSpinBox.value())
-            while not self.stopThreads.is_set():
-                # Look for ripe MIDI messages
-                for msg, addedTime in buffer:
-                    if addedTime + (delay / float(1000)) < time.time():
-                        if msg.type in ["note_on", "note_off"]:
-                            msg.note += interval
-                            msg.velocity = min(int(msg.velocity * volume / 100), 126)
-                        outport.send(msg)
-                        buffer.remove((msg, addedTime))
-                # Look for new MIDI messages
-                for msg in inport.iter_pending():
-                    buffer.append((msg, time.time()))
-
-        def mirror():
-            position = self.positionComboBox.currentText()
-            # All note indices are shifted down by 21 from their MIDI value
-            axis = self.notesList().index(self.axisComboBox.currentText()) + 21
-            while not self.stopThreads.is_set():
-                # Look for ripe MIDI messages
-                for msg, addedTime in buffer:
-                    if addedTime + (delay / float(1000)) < time.time():
-                        if msg.type in ["note_on", "note_off"]:
-                            msg.note -= 2 * (msg.note - axis)
-                            msg.velocity = min(int(msg.velocity * volume / 100), 126)
-                        outport.send(msg)
-                        buffer.remove((msg, addedTime))
-                # Look for new MIDI messages
-                for msg in inport.iter_pending():
-                    buffer.append((msg, time.time()))
-
-
+        # Check which tab is active
         if self.tabWidget.currentIndex() is 0:
-            callback = transpose
+            tab = 'transpose'
         if self.tabWidget.currentIndex() is 1:
-            callback = mirror
-        t = threading.Thread(target=callback)
+            tab = 'mirror'
+
+        def callback(tab):
+            while not self.stopThreads.is_set():
+                # Look for ripe MIDI messages
+                for msg, addedTime in buffer:
+                    if addedTime + (delay / float(1000)) < time.time():
+                        if msg.type in ['note_on', 'note_off']:
+                            if tab is 'transpose':
+                                # Transpose
+                                interval = int(self.intervalSpinBox.value())
+                                # Skip notes below 0 or above 127
+                                if msg.note + interval < 0 or msg.note + interval > 127:
+                                    continue
+                                msg.note += interval
+
+                            if tab is 'mirror':
+                                # Mirror
+                                position = self.positionComboBox.currentText()
+                                # All note indices are shifted down by 21 from their MIDI value
+                                axis = self.notesList().index(self.axisComboBox.currentText()) + 21
+                                # Skip notes below 0 or above 127
+                                if msg.note - 2 * (msg.note - axis) < 0 or msg.note - 2 * (msg.note - axis) > 127:
+                                    continue
+                                msg.note -= 2 * (msg.note - axis)
+                            msg.velocity = min(int(msg.velocity * volume / 100), 127)
+                        outport.send(msg)
+                        buffer.remove((msg, addedTime))
+                # Look for new MIDI messages
+                for msg in inport.iter_pending():
+                    buffer.append((msg, time.time()))
+
+        t = threading.Thread(target=callback, args=[tab])
         t.start()
 
     def notesList(self):
@@ -99,7 +101,7 @@ class Window(gui.Ui_MainWindow):
         self.stopThreads.set()
 
     def close(self):
-        self.stopThreads.set()
+        self.stop()
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
