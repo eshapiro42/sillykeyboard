@@ -45,8 +45,8 @@ class Window(gui.Ui_MainWindow):
         self.stopThreads.set()
         time.sleep(.05)
         self.stopThreads.clear()
-        outport = mido.open_output(self.inputComboBox.currentText())
-        inport = mido.open_input(self.outputComboBox.currentText())
+        outport = mido.open_output(self.outputComboBox.currentText())
+        inport = mido.open_input(self.inputComboBox.currentText())
         delay = float(self.delaySpinBox.value())
         volume = float(self.volumeSpinBox.value())
         buffer = []
