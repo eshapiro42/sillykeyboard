@@ -85,7 +85,8 @@ class Window(gui.Ui_MainWindow):
                 # Look for new MIDI messages
                 for msg in inport.iter_pending():
                     buffer.append((msg, time.time()))
-
+                time.sleep(.005)
+					
         t = threading.Thread(target=callback, args=[tab])
         t.start()
 
