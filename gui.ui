@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>493</width>
-    <height>364</height>
+    <height>368</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -152,7 +152,7 @@
        </size>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="transposeTab">
        <attribute name="title">
@@ -319,6 +319,12 @@
             </item>
             <item>
              <widget class="QSpinBox" name="volumeSpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="maximum">
                <number>200</number>
               </property>
@@ -340,6 +346,12 @@
             </item>
             <item>
              <widget class="QSpinBox" name="delaySpinBox">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
+              </property>
               <property name="maximum">
                <number>60000</number>
               </property>

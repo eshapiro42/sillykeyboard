@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(493, 364)
+        MainWindow.resize(493, 368)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -151,6 +151,7 @@ class Ui_MainWindow(object):
         self.volumeLabel.setObjectName("volumeLabel")
         self.volumeVerticalLayout.addWidget(self.volumeLabel)
         self.volumeSpinBox = QtWidgets.QSpinBox(self.controlWidget)
+        self.volumeSpinBox.setMinimumSize(QtCore.QSize(0, 30))
         self.volumeSpinBox.setMaximum(200)
         self.volumeSpinBox.setProperty("value", 100)
         self.volumeSpinBox.setObjectName("volumeSpinBox")
@@ -162,6 +163,7 @@ class Ui_MainWindow(object):
         self.delayLabel.setObjectName("delayLabel")
         self.delayVerticalLayout.addWidget(self.delayLabel)
         self.delaySpinBox = QtWidgets.QSpinBox(self.controlWidget)
+        self.delaySpinBox.setMinimumSize(QtCore.QSize(0, 30))
         self.delaySpinBox.setMaximum(60000)
         self.delaySpinBox.setObjectName("delaySpinBox")
         self.delayVerticalLayout.addWidget(self.delaySpinBox)
@@ -196,7 +198,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
