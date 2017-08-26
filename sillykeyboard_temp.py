@@ -45,8 +45,8 @@ class Window(gui.Ui_MainWindow):
         self.stopThreads.set()
         time.sleep(.05)
         self.stopThreads.clear()
-        self.outport = mido.open_output(self.outputComboBox.currentText())
-        self.inport = mido.open_input(self.inputComboBox.currentText())
+        outport = mido.open_output(self.outputComboBox.currentText())
+        inport = mido.open_input(self.inputComboBox.currentText())
         delay = float(self.delaySpinBox.value())
         volume = float(self.volumeSpinBox.value())
         buffer = []
@@ -55,13 +55,15 @@ class Window(gui.Ui_MainWindow):
             tab = 'transpose'
         if self.tabWidget.currentIndex() is 1:
             tab = 'mirror'
+        tab = 'repeat'
 
         def callback(tab):
             while not self.stopThreads.is_set():
                 # Look for ripe MIDI messages
-                for msg, addedTime in buffer:
-                    if addedTime + (delay / float(1000)) < time.time():
+                for msg, playedTime in buffer:
+                    if playedTime + (delay / float(1000)) < time.time():
                         if msg.type in ['note_on', 'note_off']:
+
                             if tab is 'transpose':
                                 # Transpose
                                 interval = int(self.intervalSpinBox.value())
@@ -79,13 +81,19 @@ class Window(gui.Ui_MainWindow):
                                 if msg.note - 2 * (msg.note - axis) < 0 or msg.note - 2 * (msg.note - axis) > 127:
                                     continue
                                 msg.note -= 2 * (msg.note - axis)
+
+                            if tab is 'repeat':
+                                # repeat
+                                repeat = 1
+                                buffer.append((msg, time.time() + repeat))
+
                             msg.velocity = min(int(msg.velocity * volume / 100), 127)
-                        self.outport.send(msg)
-                        buffer.remove((msg, addedTime))
+                        outport.send(msg)
+                        buffer.remove((msg, playedTime))
                 # Look for new MIDI messages
-                for msg in self.inport.iter_pending():
+                for msg in inport.iter_pending():
                     buffer.append((msg, time.time()))
-                time.sleep(.005)
+                time.sleep(.0025)
 
         t = threading.Thread(target=callback, args=[tab])
         t.start()
@@ -100,13 +108,6 @@ class Window(gui.Ui_MainWindow):
         return notes
 
     def stop(self):
-        # Sustain pedal off
-        for channel in range(3):
-            for value in [0]:
-                msg = mido.Message('control_change', channel=channel, \
-                                   control=64, value=value, time=0)
-                self.outport.send(msg)
-        # Kill the thread
         self.stopThreads.set()
 
     def close(self):
