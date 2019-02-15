@@ -4,7 +4,7 @@ Generate music interactively with any MIDI keyboard.
 
 
 
-![img1](screenshots\img1.PNG)
+![img1](screenshots/img1.PNG)
 
 
 
