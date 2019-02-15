@@ -18,7 +18,7 @@ Connect a MIDI keyboard to your computer with a USB cable and you're good to go!
 
 
 
-# Requirements
+## Requirements
 
 The following are required unless you are running the Windows release:
 
